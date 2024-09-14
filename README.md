@@ -12,3 +12,8 @@ Making internal states is enough one in bit stream meaning as in p1.
 
 # Bugs
 Very unstable with first upload. Crashes happens and don't happens in same input stream. I don't know why, so we'll continue the debug.
+
+# Usage
+    ./masp(32)?(mp)? \[+-\]\[ap\] in0.ppm ...
+    # we assume + for making internal states, - for applying the states.
+    # we assume a only for whole image, p for 3-image before prediction.

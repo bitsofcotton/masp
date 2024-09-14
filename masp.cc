@@ -59,7 +59,7 @@ int main(int argc, const char* argv[]) {
            mi.setVector(i * in[i].rows() * in[i].cols() + j * in[i].cols(),
              in[i].row(j));
       mi = makeProgramInvariant<num_t>(mi, - num_t(int(1)), true).first;
-      SimpleMatrix<num_t> out4(4, mi.size());
+      SimpleMatrix<num_t> out4(4, L[0].cols());
       for(int i = 0; i < mi.size(); i ++) {
         assert(L[i].cols() == mi.size());
         out4.setCol(i, L[i] * mi);
@@ -178,22 +178,28 @@ int main(int argc, const char* argv[]) {
       cache[1] = move(cache[2]);
       cache[2] = move(work);
     }
-    assert(in[0].size() <= in.size());
     const int d(num_t(int(2)) / sqrt(log(num_t(int(2)))) * sqrt(num_t(int(in.size())) * log(num_t(int(in.size()))) ) );
-    if(in[0].size() < d) {
-      assert("we need to crush input, none implemented.");
-    } else {
+    cerr << in.size() << ", " << in[0].size() << ", " << d << endl;
+    const auto isize(in.size() / ((in[0].size() - 1) / (mm == 'a' ? 1 : 3)));
+    assert(in[0].size() <= isize);
+    //if(isize < d) {
+    if(isize < d)
+      // assert(0 && "we need to crush input, none implemented.");
+      cerr << "we need to crush input, none implemented. fall through." << endl;
+    //} else {
+    for(int i0 = 0; i0 < in[0].size() / isize; i0 ++) {
       SimpleMatrix<num_t> work;
-      work.resize(in.size(), in[0].size());
-      work.entity = move(in);
+      work.resize(isize, in[0].size());
+      for(int i = 0; i < work.rows(); i ++)
+        work.row(i) = in[i0 + i];
       auto Q(work.QR());
       vector<pair<num_t, int> > sute;
       vector<SimpleVector<num_t> > res;
       res.reserve(4);
-      for(int i = 0; i < in[0].size(); i ++) {
+      for(int i = 0; i < work.rows(); i ++) {
         const auto orth(linearInvariant<num_t>(work));
         const auto n2(orth.dot(orth));
-        if(in[0].size() - 4 <= i) {
+        if(work.rows() - 4 <= i) {
           res.emplace_back(orth);
           res[res.size() - 1] /= - res[res.size() - 1][0];
           res[res.size() - 1] = res[res.size() - 1].subVector(1,
@@ -212,6 +218,7 @@ int main(int argc, const char* argv[]) {
       mres.entity = move(res);
       cerr << "OK" << endl;
       cout << mres << endl;
+    //}
     }
   }
   return 0;
