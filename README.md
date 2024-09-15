@@ -16,4 +16,4 @@ Very unstable with first upload. Crashes happens and don't happens in same input
 # Usage
     ./masp(32)?(mp)? [+-][ap] in0.ppm ...
     # we assume + for making internal states, - for applying the states.
-    # we assume a only for whole image, p for 3-image before prediction.
+    # we assume a only for whole image, p for 3-image back prediction.
