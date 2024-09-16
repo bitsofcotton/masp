@@ -124,8 +124,8 @@ int main(int argc, const char* argv[]) {
     }
     const int d(num_t(int(2)) / sqrt(log(num_t(int(2)))) * sqrt(num_t(int(in.size())) * log(num_t(int(in.size()))) ) );
     assert(in[0].size() * in[0][0].rows() * in[0][0].cols() <= in.size());
-    assert(in.size() < d);
-    if(d * 2 <= in.size())
+    assert(in[0].size() < d);
+    if(d * 2 <= in[0].size())
       cerr << "we might need crush input but we don't implement, continue..." << endl;
     SimpleMatrix<num_t> L0(in.size(), mm == 'a' ?
       in[0].size() * in[0][0].rows() * in[0][0].cols() + 1 :
