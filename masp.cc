@@ -19,12 +19,8 @@ typedef myfloat num_t;
 using std::cout;
 using std::cerr;
 using std::endl;
-using std::atoi;
 using std::string;
 using std::to_string;
-using std::vector;
-using std::sort;
-using std::binary_search;
 using std::make_pair;
 
 #include <stdlib.h>
@@ -128,8 +124,9 @@ int main(int argc, const char* argv[]) {
     }
     const int d(num_t(int(2)) / sqrt(log(num_t(int(2)))) * sqrt(num_t(int(in.size())) * log(num_t(int(in.size()))) ) );
     assert(in[0].size() * in[0][0].rows() * in[0][0].cols() <= in.size());
-    if(in.size() < d)
-      cerr << "we need to crush input but not implemented." << endl;
+    assert(in.size() < d);
+    if(d * 2 <= in.size())
+      cerr << "we might need crush input but we don't implement, continue..." << endl;
     SimpleMatrix<num_t> L0(in.size(), mm == 'a' ?
       in[0].size() * in[0][0].rows() * in[0][0].cols() + 1 :
       in[0].size() * in[0][0].rows() * in[0][0].cols() );
