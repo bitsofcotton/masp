@@ -11,12 +11,19 @@ However, the +p, -p command only depends on 3 back input images.
 Making internal states is enough one in bit stream meaning as in p1.
 
 # Usage
-    ./masp(32)?(mp)? [+-][ap] in0.ppm ...
-    # we assume + for making internal states, - for applying the states.
-    # we assume a only for whole image, p for 3-image back prediction.
+    ./masp(32)?(mp)? [+-i] in0.ppm ...
+    # we assume + for making internal states,
+    #           - for applying into the internal states invariant.
+    #           i for inverting image.
 
-# Whole graphics prediction with p1
-We can learn masp... +a ((whole image)) &gt; learn.txt then, pp3n each pixel projection causes internal space correct prediction in p1 meaning. (we should get last quad image and revert them by learned vector then average them.)
+# Tips
+    ./masp(32)?(mp)? + in0.ppm ... > L.txt
+    ./masp(32)?(mp)? - another0.ppm < L.txt
+    ...
+    ddpmopt(32)?(mp)? another0.ppm-i4.ppm ...
+    ./masp(32)?(mp)? i predg.ppm < L.txt
+
+This chain causes internal states depend predictions.
 
 However, this is internal states valid prediction, isn't the next one image out of the states meaning.
 
