@@ -51,8 +51,7 @@ int main(int argc, const char* argv[]) {
     }
     for(int i = 0; i < out4.rows(); i ++)
       out4.row(i) = revertProgramInvariant<num_t>(make_pair(
-        makeProgramInvariant<num_t>(normalize<num_t>(out4.row(i)),
-          - num_t(int(1)), true).first, num_t(int(1))), true);
+        out4.row(i) / num_t(out4.cols()), num_t(int(1))), true);
     vector<SimpleMatrix<num_t> > oimg;
     oimg.resize(in.size());
     for(int i = 0; i < oimg.size(); i ++) {
