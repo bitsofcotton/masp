@@ -34,3 +34,8 @@ However, this is internal states valid prediction, isn't the next one image out 
 
 Also, we can slide L.txt transision and predict them, however, we cannot apply this concern with another images.
 
+# Tips (2)
+If we make L.txt by partial one and grows L2.txt, ..., we can predict next one step by matrix predictions.
+
+Either, when the size we use for the L.txt:matrix.cols() grows up, the prediction causes larger dimension specific values on the stream, we don't know what the result means.
+
