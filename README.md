@@ -27,6 +27,8 @@ Making internal states is enough one in bit stream meaning as in p1.
     predg(32)?(mp)? another0.ppm-i4.ppm ...
     ./masp(32)?(mp)? i predg.ppm < L.txt
     python3 ../goki_check_cc/test.py ./masp(32)?(mp)? mapply L.txt predg.ppm-i.ppm
+    # Also, we might need separate inputs by:
+    python3 ../goki_check_cc/test.py dummmy (cat|catr|catb|catbr) ... > cat.txt
 
 This chain causes internal states depend predictions with goki_check_cc:test.py bit operation.
 
