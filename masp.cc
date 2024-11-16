@@ -31,8 +31,8 @@ int main(int argc, const char* argv[]) {
 #define int int32_t
   assert(1 < argc);
   const auto& m(argv[1][0]);
-  assert((m == '+' || m == '-' || m == 'i') && ! argv[1][1]);
-  if(m == '-') {
+  assert((m == '+' || m == '-' || m == 'i' || m == '4') && ! argv[1][1]);
+  if(m == '-' || m == '4') {
     assert(argc == 3);
     vector<SimpleMatrix<num_t> > in;
     if(! loadp2or3<num_t>(in, argv[2])) exit(- 1);
@@ -51,7 +51,7 @@ int main(int argc, const char* argv[]) {
     }
     for(int i = 0; i < out4.rows(); i ++)
       out4.row(i) = revertProgramInvariant<num_t>(make_pair(
-        out4.row(i) / num_t(out4.cols()), num_t(int(1))), true);
+        normalize<num_t>(out4.row(i) ), num_t(int(1))), true);
     vector<SimpleMatrix<num_t> > oimg;
     oimg.resize(in.size());
     for(int i = 0; i < oimg.size(); i ++) {
@@ -64,7 +64,16 @@ int main(int argc, const char* argv[]) {
               out4.row(k).subVector(i * in[i].rows() * in[i].cols() +
                 j * in[i].cols(), in[i].cols() ) );
     }
-    if(! savep2or3<num_t>((string(argv[2]) + string("-i4.ppm")).c_str(), oimg) )
+    if(m == '4') {
+      out4 = out4 * out4.transpose();
+      out4 = out4.SVD() * out4 * out4.transpose().SVD();
+      vector<SimpleMatrix<num_t> > out;
+      out.resize(1, SimpleMatrix<num_t>(1, 4));
+      for(int i = 0; i < out[0].cols(); i ++)
+        out[0](0, i) = out4(i, i);
+      if(! savep2or3<num_t>((string(argv[2]) + string("-4.ppm")).c_str(), normalize<num_t>(out)) )
+        cerr << "failed to save." << endl;
+    } else if(! savep2or3<num_t>((string(argv[2]) + string("-i4.ppm")).c_str(), oimg) )
       cerr << "failed to save." << endl;
   } else if(m == 'i') {
     assert(argc == 3);

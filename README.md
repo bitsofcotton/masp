@@ -29,6 +29,10 @@ Making internal states is enough one in bit stream meaning as in p1.
     python3 ../goki_check_cc/test.py ./masp(32)?(mp)? mapply L.txt predg.ppm-i.ppm
     # Also, we might need separate inputs by:
     python3 ../goki_check_cc/test.py dummmy (cat|catr|catb|catbr) ... > cat.txt
+    
+    # output the picture go with ddpmopt whole pixel context images.
+    ./masp(32)?(mp)? 4 out.pgm < L.txt
+    python3 ../goki_check_cc/test.py ./masp(32)?(mp)? mspecpixel L.txt another0.ppm ...
 
 This chain causes internal states depend predictions with goki_check_cc:test.py bit operation.
 
