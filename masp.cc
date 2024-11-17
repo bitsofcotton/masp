@@ -49,6 +49,17 @@ int main(int argc, const char* argv[]) {
       std::cin >> L;
       out4.setCol(i, L * mi);
     }
+    if(m == '4') {
+      out4 = out4 * out4.transpose();
+      out4 = out4.SVD() * out4 * out4.transpose().SVD();
+      vector<SimpleMatrix<num_t> > out;
+      out.resize(1, SimpleMatrix<num_t>(1, out4.rows()));
+      for(int i = 0; i < out[0].cols(); i ++)
+        out[0](0, i) = out4(i, i);
+      if(! savep2or3<num_t>((string(argv[2]) + string("-4.ppm")).c_str(), normalize<num_t>(out)) )
+        cerr << "failed to save." << endl;
+      return 0;
+    }
     for(int i = 0; i < out4.rows(); i ++)
       out4.row(i) = revertProgramInvariant<num_t>(make_pair(
         normalize<num_t>(out4.row(i) ), num_t(int(1))), true);
@@ -64,16 +75,7 @@ int main(int argc, const char* argv[]) {
               out4.row(k).subVector(i * in[i].rows() * in[i].cols() +
                 j * in[i].cols(), in[i].cols() ) );
     }
-    if(m == '4') {
-      out4 = out4 * out4.transpose();
-      out4 = out4.SVD() * out4 * out4.transpose().SVD();
-      vector<SimpleMatrix<num_t> > out;
-      out.resize(1, SimpleMatrix<num_t>(1, 4));
-      for(int i = 0; i < out[0].cols(); i ++)
-        out[0](0, i) = out4(i, i);
-      if(! savep2or3<num_t>((string(argv[2]) + string("-4.ppm")).c_str(), normalize<num_t>(out)) )
-        cerr << "failed to save." << endl;
-    } else if(! savep2or3<num_t>((string(argv[2]) + string("-i4.ppm")).c_str(), oimg) )
+    if(! savep2or3<num_t>((string(argv[2]) + string("-i4.ppm")).c_str(), oimg) )
       cerr << "failed to save." << endl;
   } else if(m == 'i') {
     assert(argc == 3);
