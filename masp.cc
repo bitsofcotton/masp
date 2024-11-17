@@ -51,7 +51,7 @@ int main(int argc, const char* argv[]) {
     }
     if(m == '4') {
       out4 = out4 * out4.transpose();
-      out4 = out4.SVD() * out4 * out4.transpose().SVD();
+      out4 = out4.SVD() * out4 * out4.transpose().SVD().transpose();
       vector<SimpleMatrix<num_t> > out;
       out.resize(1, SimpleMatrix<num_t>(1, out4.rows()));
       for(int i = 0; i < out[0].cols(); i ++)
