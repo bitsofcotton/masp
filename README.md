@@ -12,27 +12,13 @@ Making internal states is enough one in bit stream meaning as in p1.
     # we assume + for making internal states,
     #           - for applying into the internal states invariant.
     #           i for inverting image.
+    # also we assume in0.ppm ... is goki_check_cc:test.py bit generated images.
 
 # Tips
     ./masp(32)?(mp)? + in0.ppm ... > L.txt
-    ./masp(32)?(mp)? - another0.ppm < L.txt
-    ...
-    predg(32)?(mp)? another0.ppm-i4.ppm ...
-    ./masp(32)?(mp)? i predg.ppm < L.txt
-    #
-    # This chain also
-    #
-    ./masp(32)?(mp)? + in0.ppm ... > L.txt
-    python3 ../goki_check_cc/test.py ./masp(32)?(mp)? mprep L.txt another0.ppm ...
-    predg(32)?(mp)? another0.ppm-i4.ppm ...
-    ./masp(32)?(mp)? i predg.ppm < L.txt
-    python3 ../goki_check_cc/test.py ./masp(32)?(mp)? mapply L.txt predg.ppm-i.ppm
-    # Also, we might need separate inputs by:
-    python3 ../goki_check_cc/test.py dummmy (cat|catr|catb|catbr) ... > cat.txt
-    
-    # output the picture go with ddpmopt whole pixel context images.
-    ./masp(32)?(mp)? 4 another0.ppm < L.txt
-    python3 ../goki_check_cc/test.py ./masp(32)?(mp)? mspecpixel L.txt another0.ppm ...
+    ./masp(32)?(mp)? - another0.ppm ... < L.txt
+    ddpmopt(32)?(mp)? 0 another0.ppm-4.ppm ...
+    ./masp(32)?(mp)? i <another0.ppm-height> predg.ppm ... < L.txt
 
 This chain causes internal states depend predictions with goki_check_cc:test.py bit operation.
 
