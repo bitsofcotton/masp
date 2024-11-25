@@ -47,9 +47,8 @@ int main(int argc, const char* argv[]) {
       const auto out4(L * makeProgramInvariant<num_t>(mi, - num_t(int(1)), true).first);
       vector<SimpleMatrix<num_t> > out;
       out.resize(in.size(), SimpleMatrix<num_t>(1, out4.size()));
-      for(int i = 0; i < out[0].cols(); i ++)
-        for(int j = 0; j < out.size(); j ++)
-          out[j](0, i) = out4[i];
+      for(int j = 0; j < out.size(); j ++)
+        out[j].row(0) = out4;
       if(! savep2or3<num_t>((string(argv[i0]) + string("-4.ppm")).c_str(),
         normalize<num_t>(out)) )
         cerr << "failed to save." << endl;
@@ -68,13 +67,12 @@ int main(int argc, const char* argv[]) {
       out.resize(in.size(), SimpleMatrix<num_t>(height, L.cols() / (in.size() * height)).O());
       for(int i = 0; i < out.size(); i ++)
         for(int j = 0; j < out[0].rows(); j ++)
-          for(int k = 0; k <  out[0].cols(); k ++) {
-            out[i](j, k) = num_t(int(0));
-            for(int n = 0; n < L.rows(); n ++)
-              out[i](j, k) += in[i](0, n) *
-                L(n, i * out[0].rows() * out[0].cols() + j * out[0].cols() + k);
-          }
-      if(! savep2or3<num_t>((string(argv[i0]) + string("-i.ppm")).c_str(), out) )
+          for(int n = 0; n < L.rows(); n ++)
+            out[i].row(j) += L.row(n).subVector(
+              i * out[0].rows() * out[0].cols() + j * out[0].cols(),
+                out[0].cols()) * in[i](0, n);
+      if(! savep2or3<num_t>((string(argv[i0]) + string("-i.ppm")).c_str(),
+        normalize<num_t>(out)) )
         cerr << "failed to save." << endl;
     }
   } else if(m == '+') {
@@ -113,6 +111,7 @@ int main(int argc, const char* argv[]) {
     auto Q(L.QR());
     res.reserve(Q.rows() - 1);
     for(int ii = 0; ii < Q.rows() - 1; ii ++) {
+      cerr << ii << " / " << Q.rows() - 1 << endl;
       const auto orth(Q.zeroFix(L, sute));
       const auto n2(orth.dot(orth));
       if(res.size()) {
@@ -147,6 +146,7 @@ int main(int argc, const char* argv[]) {
   } else goto usage;
   return 0;
  usage:
+  cerr << "Usage:" << endl;
   cerr << argv[0] << " + in0.ppm ... > L.txt" << endl;
   cerr << argv[0] << " - another0.ppm ... < L.txt" << endl;
   cerr << "ddpmopt(32)?(mp)? 0 another0.ppm-4.ppm ..." << endl;
