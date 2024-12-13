@@ -2794,45 +2794,39 @@ template <typename T> SimpleMatrix<T> diffRecur(const int& size0) {
   return size0 < 0 ? ii : dd;
 }
 
-template <typename T> static inline SimpleVector<T> taylor(const int& size, const T& step) {
+template <typename T> static inline SimpleVector<complex<T> > taylorc(const int& size, const T& step, const T& stepw) {
   const int  step00(max(int(0), min(size - 1, int(floor(step)))));
   const auto residue0(step - T(step00));
   const auto step0(step00 == size - 1 || abs(residue0) <= T(int(1)) / T(int(2)) ? step00 : step00 + 1);
   const auto residue(step - T(step0));
-  if(residue == T(int(0))) return SimpleVector<T>(size).ek(step0);
+  if(residue == T(int(0))) return SimpleVector<complex<T> >(size).ek(step0);
+  const auto residuem(residue - (step - stepw));
   // N.B. following code is equivalent to exp each dft.
   //      this improves both accuracy and speed.
   // N.B. We don't need to matter which sign dft/idft uses till the sign
   //      we multiply is bonded to the transformation.
-  auto res(dft<T>(size));
   static const auto Pi(T(int(4)) * atan2(T(int(1)), T(int(1)) ));
+  auto res(dft<T>(- size).row(step0));
 #if defined(_OPENMP)
 #pragma omp parallel for schedule(static, 1)
 #endif
-  for(int i = 0; i < res.rows(); i ++)
-    res.row(i) *= exp(complex<T>(T(int(0)), - T(int(2)) * Pi * T(i) / T(res.rows()) ));
-  return (res.transpose() * dft<T>(- size).row(step0)).template real<T>();
-/*
-  SimpleVector<T> res(size);
-  res.ek(step0);
-  if(residue == T(int(0))) return res;
-  const auto Dt(diff<T>(size).transpose());
-        auto dt(Dt.col(step0) * residue);
-  // N.B.
-  // if we deal with (D *= r, residue /= r), it is identical with (D, residue)
-  // So ||D^n * residue^n|| / T(n!) < 1 case, this loop converges.
-  // but with n^n v.s. n!, differential of n! is faster than n^n.
-  // (n! < n^n but a^n < n! somewhere).
-  // And, we treat D * residue as a block, so Readme.md's condition 1/x^k needs
-  // to be in the series in this.
-  for(int i = 2; ; i ++) {
-    const auto last(res);
-    res += dt;
-    if(last == res) break;
-    dt   = Dt * dt * residue / T(i);
-  }
-  return res;
-*/
+  for(int i = 0; i < res.size(); i ++)
+    res[i] *= step != stepw ? 
+      (i ? exp(complex<T>(T(int(0)), - T(int(2)) * Pi * T(i) * residue / T(res.size()) ))
+          / complex<T>(T(int(0)), - T(int(2)) * Pi * T(i) / T(res.size()) )
+      - exp(complex<T>(T(int(0)), - T(int(2)) * Pi * T(i) * residuem / T(res.size()) ))
+          / complex<T>(T(int(0)), - T(int(2)) * Pi * T(i) / T(res.size()) ) :
+        complex<T>(T(int(0))) )
+      : exp(complex<T>(T(int(0)), - T(int(2)) * Pi * T(i) * residue / T(res.size()) ));
+  return dft<T>(size).transpose() * res;
+}
+
+template <typename T> static inline SimpleVector<T> taylor(const int& size, const T& step, const T& stepw) {
+  return taylorc<T>(size, step, stepw).template real<T>();
+}
+
+template <typename T> static inline SimpleVector<T> taylor(const int& size, const T& step) {
+  return taylor<T>(size, step, step);
 }
 
 template <typename T> static inline SimpleVector<T> linearInvariant(const SimpleMatrix<T>& in) {
@@ -3061,7 +3055,9 @@ public:
       t.resize(in + 1, SimpleMatrix<T>());
     t[in].resize(size, in);
     for(int i = 0; i < size; i ++)
-      t[in].row(i) = taylor<T>(in, T(i) * T(in) / T(size));
+      t[in].row(i) = taylor<T>(in,
+        (T(i) + T(int(1)) / T(int(2))) * T(in) / T(size),
+        (T(i) - T(int(1)) / T(int(2))) * T(in) / T(size));
     return t[in];
   }
   SimpleVector<T> cut;
@@ -3331,13 +3327,6 @@ template <typename T> inline T P012L<T>::next(const SimpleVector<T>& d) {
 }
 
 
-template <typename T> SimpleVector<T> pnext(const int& size, const int& step = 1, const int& r = 1) {
-  auto work(taylor(size * r, T(step * r < 0 ? step * r : (size + step) * r - 1)));
-  for(int i = 1; i < r; i ++)
-    work += taylor(size * r, T(step * r < 0 ? step * r + i : (size + step) * r - 1 - i));
-  return (dft<T>(- size * r).subMatrix(0, 0, size * r, size) * dft<T>(size)).template real<T>().transpose() * work;
-}
-
 template <typename T> SimpleVector<T> minsq(const int& size) {
   assert(1 < size);
   const T xsum(size * (size - 1) / 2);
@@ -3349,17 +3338,15 @@ template <typename T> SimpleVector<T> minsq(const int& size) {
   return s;
 }
 
-template <typename T> const SimpleVector<T>& pnextcacher(const int& size, const int& step, const int& r) {
-  assert(0 < size && 0 <= step && 0 < r);
-  static vector<vector<vector<SimpleVector<T> > > > cp;
+template <typename T> const SimpleVector<T>& pnextcacher(const int& size, const int& step) {
+  assert(0 < size && 0 <= step);
+  static vector<vector<SimpleVector<T> > > cp;
   if(cp.size() <= size)
-    cp.resize(size + 1, vector<vector<SimpleVector<T> > >());
+    cp.resize(size + 1, vector<SimpleVector<T> >());
   if(cp[size].size() <= step)
-    cp[size].resize(step + 1, vector<SimpleVector<T> >());
-  if(cp[size][step].size() <= r)
-    cp[size][step].resize(r + 1, SimpleVector<T>());
-  if(cp[size][step][r].size()) return cp[size][step][r];
-  return cp[size][step][r] = pnext<T>(size, step, r);
+    cp[size].resize(step + 1, SimpleVector<T>());
+  if(cp[size][step].size()) return cp[size][step];
+  return cp[size][step] = (dft<T>(- size) * (dft<T>(size * 2).subMatrix(0, 0, size, size * 2) * taylorc<T>(size * 2, T(step < 0 ? step * 2 : (size + step) * 2 - 1), T(step < 0 ? step * 2 + 2 : (size + step) * 2 - 3)) )).template real<T>();
 }
 
 template <typename T> const SimpleVector<T>& mscache(const int& size) {
@@ -3384,14 +3371,14 @@ template <typename T> const SimpleMatrix<complex<T> >& dftcache(const int& size)
   return cidft[abs(size)] = dft<T>(size);
 }
 
-template <typename T, int r = 8> class P0 {
+template <typename T> class P0 {
 public:
   inline P0(const int& step = 1) {
     this->step = step;
   }
   inline ~P0() { ; };
   inline T next(const SimpleVector<T>& in, const int& sute = 0) {
-    return pnextcacher<T>(in.size(), ((step - 1) % in.size()) + 1, r).dot(in);
+    return pnextcacher<T>(in.size(), ((step - 1) % in.size()) + 1).dot(in);
   }
   int step;
 };
@@ -3935,7 +3922,9 @@ template <typename T> typename Decompose<T>::Vec Decompose<T>::enlarge(const Vec
   if(pp.rows() < size * r) {
     pp.resize(size * r, size);
     for(int i = 0; i < pp.rows(); i ++)
-      pp.row(i) = taylor<T>(size, T(i) * T(size - 1) / T(pp.rows() - 1));
+      pp.row(i) = taylor<T>(size,
+        (T(i) + T(int(1)) / T(int(2))) * T(size - 1) / T(pp.rows() - 1),
+        (T(i) - T(int(1)) / T(int(2))) * T(size - 1) / T(pp.rows() - 1) );
   }
   const auto m(mother(in));
   const auto f2(freq(m, in));
@@ -4379,7 +4368,7 @@ template <typename T> static inline SimpleMatrix<T> center(const SimpleMatrix<T>
 template <typename T> using PP0 = P01<T, P01delim<T>, true>;
 
 // N.B. as ddpmopt:README.md, PP3 is least and enough normally.
-template <typename T, int nprogress = 100> SimpleVector<T> predv0(const vector<SimpleVector<T> >& in, const string& strloop = string(""), const int& step = 1) {
+template <typename T, int nprogress = 20> SimpleVector<T> predv0(const vector<SimpleVector<T> >& in, const string& strloop = string(""), const int& step = 1) {
   // N.B. we need to initialize p0 vector.
   SimpleVector<T> seconds(in.size());
   seconds.O();
@@ -4389,6 +4378,7 @@ template <typename T, int nprogress = 100> SimpleVector<T> predv0(const vector<S
   for(int i = 0; i < in.size(); i ++)  {
     seconds[i] = makeProgramInvariant<T>(in[i], - T(int(1)), true).second;
   }
+  // N.B. not in use, we use whole in.size() with PP0.
   const int unit(in.size() / 2);
   SimpleVector<T> p(in[0].size());
   p.O();
@@ -4396,7 +4386,7 @@ template <typename T, int nprogress = 100> SimpleVector<T> predv0(const vector<S
 #pragma omp parallel for schedule(static, 1)
 #endif
   for(int j = 0; j < in[0].size(); j ++) {
-    if(nprogress && ! (j % max(1, in[0].size() / nprogress)) )
+    if(nprogress && ! (j % max(int(1), int(in[0].size() / nprogress))) )
       cerr << j << " / " << in[0].size() << ", " << strloop << endl;
     idFeeder<T> buf(in.size());
     for(int i = 0; i < in.size(); i ++)
@@ -4426,28 +4416,38 @@ template <typename T, int nprogress = 100> SimpleVector<T> predv0(const vector<S
 //
 // Important N.B. However, belows doesn't improve output enough, so we elim it.
 // N.B. instead of them, we apply P0maxRank0 after predv,
-//      this improves well in practical and up to raw aleph_0.
-template <typename T, int nprogress = 100> static inline SimpleVector<T> predv1(const SimpleVector<SimpleVector<T> >& in, const int& unit = 3, const int& step = 1) {
+//      this improves well in practical and up to *plain* raw aleph_0.
+// N.B. after testing with some of the PRNG series, subtract combination
+//      is continuous condition the hypothesis we made -- is continuous gets
+//      better results for us.
+// N.B. after github.com/bitsofcotton/p2 upload and p1 change,
+//      some of the PRNG test meaning broken. so revert them.
+//      (changed p1/pp3.cc predv call to predv0 call causes split predictions
+//       however the command line chain meaning unchanged.)
+template <typename T, int nprogress = 20> static inline SimpleVector<T> predv(const SimpleVector<SimpleVector<T> >& in, const int& step) {
+  assert(0 < step && in.size() && 1 < in[0].size());
   // N.B. we specify what width in ordinary we get better result in average.
   //      we use minimum as a default, however we should use another length
   //      avoiding some of the jammers.
   // N.B. it's up to size / 3, because we need P01 double states than P0.
   //      P0 looks 4 times upper by complement, so we average double upper.
-  assert(0 <= unit && unit <= in.size() / 3 && 0 < step);
-  if(unit <= 1)
-    return predv0<T, nprogress>(in.entity, string("0 / 1"), step).subVector(0, in[0].size());
   SimpleVector<SimpleVector<T> > p;
-  p.entity.reserve(unit);
-  for(int i = 0; i < unit; i ++)
-    p.entity.emplace_back(predv0<T, nprogress>(in.subVector(i, in.size() - unit + 1).entity, to_string(i) + string(" / ") + to_string(unit), step));
+  p.entity.reserve(in.size());
+  // N.B. optimal with PP0
+  const auto start(8 + step);
+  for(int i = 1; i < start; i ++)
+    p.entity.emplace_back(SimpleVector<T>(in[0].size()).O());
+  for(int i = start; i <= in.size(); i ++)
+    p.entity.emplace_back(predv0<T, nprogress>(in.subVector(0, i).entity, to_string(i) + string(" / ") + to_string(in.size()), step));
   SimpleVector<T> res(in[0].size());
   res.O();
-  SimpleMatrix<T> ip(p.size() - step, res.size());
+  SimpleMatrix<T> ip(p.size(), res.size());
+  for(int i = 0; i < start + step; i ++)
+    ip.row(i).O();
 #if defined(_OPENMP)
-#pragma omp parallel 
-#pragma for schedule(static, 1)
+#pragma omp parallel for schedule(static, 1)
 #endif
-  for(int i = 0; i < ip.rows(); i ++) {
+  for(int i = start + step; i < ip.rows(); i ++) {
     for(int j = 0; j < ip.cols(); j ++)
       ip(i, j) = (p[i - ip.rows() + p.size() - step][j] *
         T(int(2)) - T(int(1)) ) *
@@ -4455,13 +4455,14 @@ template <typename T, int nprogress = 100> static inline SimpleVector<T> predv1(
   }
   // N.B. we need gamma complement after this.
   //      dftcache need to be single thread on first call.
+  // N.B. we bet combination subtracted series is continuous.
   res[0] = (P0maxRank0<T>(step).next(ip.col(0)) *
     (p[p.size() - 1][0] * T(int(2)) - T(int(1)) ) + T(int(1)) ) / T(int(2));
 #if defined(_OPENMP)
-#pragma for schedule(static, 1)
+#pragma omp parallel for schedule(static, 1)
 #endif
   for(int i = 1; i < res.size(); i ++) {
-    if(nprogress && ! (i % max(1, res.size() / nprogress)) )
+    if(nprogress && ! (i % max(int(1), int(res.size() / nprogress))) )
       cerr << i << " / " << res.size() << endl;
     res[i] = (P0maxRank0<T>(step).next(ip.col(i)) *
       (p[p.size() - 1][i] * T(int(2)) - T(int(1)) ) + T(int(1)) ) / T(int(2));
@@ -4469,86 +4470,40 @@ template <typename T, int nprogress = 100> static inline SimpleVector<T> predv1(
   return res;
 }
 
-template <typename T, int nprogress = 100> static inline vector<SimpleVector<T> > predv(const SimpleVector<SimpleVector<T> >& in, int unit = - 1, int nstep = - 1) {
-  if(nstep < 0) {
-    if(unit < 0) unit  = in.size() / 3;
-    nstep = max(int(1), min(int(max(sqrt(T(unit)), T(unit / 2))), int(in.size())));
-  } else if(unit < 0)
-    unit  = min(int(in.size() / 3), nstep * nstep);
-  assert(min(nstep * 2, nstep * nstep) < in.size());
-  vector<SimpleVector<T> > res;
-  res.reserve(nstep);
+template <typename T, int nprogress = 20> static inline SimpleVector<T> predv(SimpleVector<SimpleVector<T> >& in) {
+  const auto nstep(in.size() / 3 - 8);
+  SimpleVector<T> res(in[0].size());
+  res.O();
   for(int i = 0; i < nstep; i ++) {
     cerr << " *** PREDV STEP : " << i << " / " << nstep << " ***" << endl;
-    res.emplace_back(predv1<T, nprogress>(in, max(int(3), unit - i), i + 1));
+    res += predv<T, nprogress>(in, i + 1).subVector(0, res.size());
+    in.resize(in.size() - 1);
   }
-  return res;
+  in.resize(0);
+  return res /= T(int(nstep));
 }
 
-template <typename T, int nprogress = 100> static inline vector<SimpleVector<T> > predv(vector<SimpleVector<T> >& in, const int& unit = - 1, const int& nstep = - 1) {
+template <typename T, int nprogress = 20> static inline SimpleVector<T> predv(vector<SimpleVector<T> >& in, const int& step) {
   SimpleVector<SimpleVector<T> > work;
   work.entity = move(in);
-  auto res(predv<T, nprogress>(work, unit, nstep));
+  auto res(predv<T, nprogress>(work, step));
   in = move(work.entity);
   return res;
 }
 
-template <typename T, int nprogress = 3> static inline vector<SimpleVector<T> > predvall(vector<SimpleVector<T> >& in0) {
-  SimpleVector<SimpleVector<T> > in;
-  in.entity = move(in0);
-  vector<SimpleVector<T> > res;
-  const auto leastunit(3);
-  const auto leastdim(4 * 2 - 1 + leastunit);
-  for(int start = 0; start < in.size() - leastdim; start ++)
-    for(int step = 1; step < in.size() - leastdim - start; step ++)
-      for(int unit = leastunit; unit <= in.size() - leastdim - start - step; unit ++) {
-        if(in.size() - start - unit + 1 < leastdim - leastunit) continue;
-        if(unit <= step) continue;
-        cerr << " *** " << start << " / " << in.size() - leastdim << ", ";
-        cerr << step << " / " << in.size() - leastdim - start << ", ";
-        cerr << unit << " / " << in.size() - leastdim - step + 1 << " ***";
-        cerr << endl;
-        SimpleVector<SimpleVector<T> > p;
-        p.entity.reserve(unit);
-        for(int i = 0; i < unit; i ++)
-          p.entity.emplace_back(predv0<T, nprogress>(in.subVector(i + start, in.size() - start - unit + 1).entity, to_string(i) + string(" / ") + to_string(unit), step));
-        SimpleMatrix<T> ip(p.size() - step, in[0].size());
-#if defined(_OPENMP)
-#pragma omp parallel 
-#pragma for schedule(static, 1)
-#endif
-        for(int i = 0; i < ip.rows(); i ++) {
-          for(int j = 0; j < ip.cols(); j ++)
-            ip(i, j) = (p[i - ip.rows() + p.size() - step][j] *
-              T(int(2)) - T(int(1)) ) *
-                (in[i - ip.rows() + in.size()][j] * T(int(2)) - T(int(1)) );
-        }
-        for(int k = 0; k < step; k ++)
-          for(int j = 0; j < ip.rows(); j ++) {
-            if(ip.rows() - j - k <= 0) continue;
-            SimpleVector<T> work(in[0].size());
-            work.O();
-            // N.B. we need gamma complement after this.
-            //      dftcache need to be single thread on first call.
-            work[0] = (P0maxRank0<T>(step - k).next(ip.col(0).subVector(j, ip.rows() - j - k)) *
-              (p[p.size() - 1 - k][0] * T(int(2)) - T(int(1)) ) + T(int(1)) ) / T(int(2));
-#if defined(_OPENMP)
-#pragma for schedule(static, 1)
-#endif
-            for(int i = 1; i < work.size(); i ++) {
-              if(nprogress && ! (i % (work.size() / nprogress)) )
-                cerr << i << " / " << work.size() << endl;
-              work[i] = (P0maxRank0<T>(step - k).next(ip.col(i).subVector(j, ip.rows() - j - k)) *
-                (p[p.size() - 1 - k][i] * T(int(2)) - T(int(1)) ) + T(int(1)) ) / T(int(2));
-            }
-            res.emplace_back(move(work));
-          }
-      }
-  in0 = move(in.entity);
+template <typename T, int nprogress = 20> static inline SimpleVector<T> predv(vector<SimpleVector<T> >& in) {
+  SimpleVector<SimpleVector<T> > work;
+  work.entity = move(in);
+  auto res(predv<T, nprogress>(work));
+  in = move(work.entity);
   return res;
 }
 
-template <typename T> vector<vector<SimpleVector<T> > > predVec(vector<vector<SimpleVector<T> > >& in0, const int& unit = - 1, const int& step = - 1) {
+// N.B. we eliminated predvall, we don't need them with whole internal states
+//      awared predictors they have a better prediction concerned with some
+//      series of a PRNG tests.
+
+template <typename T> vector<SimpleVector<T> > predVec(vector<vector<SimpleVector<T> > >& in0, const int& step = 0) {
   assert(in0.size() && in0[0].size() && in0[0][0].size());
   vector<SimpleVector<T> > in;
   in.resize(in0.size());
@@ -4564,19 +4519,15 @@ template <typename T> vector<vector<SimpleVector<T> > > predVec(vector<vector<Si
   const auto size0(in0[0].size());
   const auto size1(in0[0][0].size());
   in0.resize(0);
-  const auto p(! unit && ! step ? predvall<T>(in) : predv<T>(in, unit, step));
-  in.resize(0);
-  vector<vector<SimpleVector<T> > > res;
-  res.resize(p.size());
-  for(int i = 0; i < res.size(); i ++) {
-    res[i].resize(size0);
-    for(int j = 0; j < res[i].size(); j ++)
-      res[i][j] = p[i].subVector(size1 * j, size1);
-  }
+  auto p(step ? predv<T>(in, step) : predv<T>(in));
+  vector<SimpleVector<T> > res;
+  res.resize(size0);
+  for(int j = 0; j < res.size(); j ++)
+    res[j] = p.subVector(size1 * j, size1);
   return res;
 }
 
-template <typename T> vector<vector<SimpleMatrix<T> > > predMat(vector<vector<SimpleMatrix<T> > >& in0, const int& unit = - 1, const int& step = - 1) {
+template <typename T> vector<SimpleMatrix<T> > predMat(vector<vector<SimpleMatrix<T> > >& in0, const int& step = 0) {
   assert(in0.size() && in0[0].size() && in0[0][0].rows() && in0[0][0].cols());
   vector<SimpleVector<T> > in;
   in.resize(in0.size());
@@ -4595,22 +4546,18 @@ template <typename T> vector<vector<SimpleMatrix<T> > > predMat(vector<vector<Si
   const auto rows(in0[0][0].rows());
   const auto cols(in0[0][0].cols());
   in0.resize(0);
-  const auto p(! unit && ! step ? predvall<T>(in) : predv<T>(in, unit, step));
-  in.resize(0);
-  vector<vector<SimpleMatrix<T> > > res;
-  res.resize(p.size());
-  for(int i = 0; i < res.size(); i ++) {
-    res[i].resize(size);
-    for(int j = 0; j < res[i].size(); j ++) {
-      res[i][j].resize(rows, cols);
-      for(int k = 0; k < rows; k ++)
-        res[i][j].row(k) = p[i].subVector(j * rows * cols + k * cols, cols);
-    }
+  auto p(step ? predv<T>(in, step) : predv<T>(in));
+  vector<SimpleMatrix<T> > res;
+  res.resize(size);
+  for(int j = 0; j < res.size(); j ++) {
+    res[j].resize(rows, cols);
+    for(int k = 0; k < rows; k ++)
+      res[j].row(k) = p.subVector(j * rows * cols + k * cols, cols);
   }
   return res;
 }
 
-template <typename T> vector<SimpleSparseTensor<T> > predSTen(vector<SimpleSparseTensor<T> >& in0, const vector<int>& idx, const int& unit = - 1, const int& step = - 1) {
+template <typename T> SimpleSparseTensor<T> predSTen(vector<SimpleSparseTensor<T> >& in0, const vector<int>& idx, const int& step = 0) {
   assert(idx.size() && in0.size());
   // N.B. we don't do input scaling.
   // N.B. the data we target is especially string stream corpus.
@@ -4642,17 +4589,14 @@ template <typename T> vector<SimpleSparseTensor<T> > predSTen(vector<SimpleSpars
               (in0[i][idx[j]][idx[k]][idx[m]] + T(int(1))) / T(int(2));
   }
   in0.resize(0);
-  const auto p(! unit && ! step ? predvall<T>(in) : predv<T>(in, unit, step));
-  in.resize(0);
-  vector<SimpleSparseTensor<T> > res;
-  res.resize(p.size());
-  for(int i = 0; i < res.size(); i ++)
-    for(int j = 0, cnt = 0; j < idx.size(); j ++)
-      for(int k = 0; k < idx.size(); k ++)
-        for(int m = 0; m < idx.size(); m ++)
-          if(binary_search(attend.begin(), attend.end(),
-               make_pair(j, make_pair(k, m))))
-            res[i][idx[j]][idx[k]][idx[m]] = p[i][cnt ++] * T(int(2)) - T(int(1));
+  auto p(step ? predv<T>(in, step) : predv<T>(in));
+  SimpleSparseTensor<T> res;
+  for(int j = 0, cnt = 0; j < idx.size(); j ++)
+    for(int k = 0; k < idx.size(); k ++)
+      for(int m = 0; m < idx.size(); m ++)
+        if(binary_search(attend.begin(), attend.end(),
+             make_pair(j, make_pair(k, m))))
+          res[idx[j]][idx[k]][idx[m]] = p[cnt ++] * T(int(2)) - T(int(1));
   return res;
 }
 
@@ -5194,7 +5138,9 @@ template <typename T> SimpleMatrix<T> filter(const SimpleMatrix<T>& data, const 
         eop.resize((size - 1) * recur + 1, size);
         for(int j = 0; j < eop.rows(); j ++)
           // N.B. sampling th. hack isn't work well.
-          eop.row(j) = taylor<T>(eop.cols(), T(j) / T(eop.rows() - 1) * T(eop.cols() - 1));
+          eop.row(j) = taylor<T>(eop.cols(),
+            (T(j) + T(int(1)) / T(int(2))) / T(eop.rows() - 1) * T(eop.cols() - 1),
+            (T(j) - T(int(1)) / T(int(2))) / T(eop.rows() - 1) * T(eop.cols() - 1));
       }
      eopi:
       result = Eop[size][recur] * data;
@@ -5218,7 +5164,9 @@ template <typename T> SimpleMatrix<T> filter(const SimpleMatrix<T>& data, const 
         cerr << "e" << flush;
         eop.resize(size / recur - 1, size);
         for(int j = 0; j < eop.rows(); j ++)
-          eop.row(j) = taylor<T>(eop.cols(), T(j) / T(eop.rows() - 1) * T(eop.cols() - 1));
+          eop.row(j) = taylor<T>(eop.cols(),
+            (T(j) + T(int(1)) / T(int(2))) / T(eop.rows() - 1) * T(eop.cols() - 1),
+            (T(j) - T(int(1)) / T(int(2))) / T(eop.rows() - 1) * T(eop.cols() - 1));
       }
      sopi:
       result = Eop[size][recur] * data;
@@ -6929,13 +6877,10 @@ template <typename T, typename U> ostream& predTOC(ostream& os, const U& input, 
     }
   }
   os << input;
-  const auto p(predSTen<T>(in, idx, 3));
-  for(int i = 0; i < p.size(); i ++) {
-    corpus<T, U> pstats;
-    pstats.corpust = p[i];
-    getAbbreved<T>(pstats, detailtitle, detail, delimiter);
-    os << pstats.simpleThresh(threshin).serialize();
-  }
+  corpus<T, U> pstats;
+  pstats.corpust = predSTen<T>(in, idx);
+  getAbbreved<T>(pstats, detailtitle, detail, delimiter);
+  os << pstats.simpleThresh(threshin).serialize();
   return os;
 }
 

@@ -31,3 +31,6 @@ If we make L.txt by partial one and grows L2.txt, ..., we can predict next one s
 
 Either, when the size we use for the L.txt:matrix.cols() grows up, the prediction causes larger dimension specific values on the stream, we don't know what the result means.
 
+# Might leave
+We leave here.
+
