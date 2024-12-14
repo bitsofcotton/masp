@@ -17,7 +17,7 @@ Making internal states is enough one in bit stream meaning as in p1.
 # Tips
     ./masp(32)?(mp)? + in0.ppm ... > L.txt
     ./masp(32)?(mp)? - another0.ppm ... < L.txt
-    ddpmopt(32)?(mp)? 0 another0.ppm-4.ppm ...
+    ddpmopt(32)?(mp)? p another0.ppm-4.ppm ...
     ./masp(32)?(mp)? i <another0.ppm-height> predg.ppm ... < L.txt
 
 This chain causes internal states depend predictions with goki_check_cc:test.py bit operation.
