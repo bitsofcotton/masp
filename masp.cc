@@ -86,6 +86,7 @@ int main(int argc, const char* argv[]) {
              work[0].rows() == in[0][0].rows() &&
              work[0].cols() == in[0][0].cols());
     }
+    cerr << "All images are on memory now." << endl << flush;
     const int d(num_t(int(2)) / sqrt(log(num_t(int(2)))) * sqrt(num_t(int(in.size())) * log(num_t(int(in.size()))) ) );
     assert(in[0].size() * in[0][0].rows() * in[0][0].cols() <= in.size());
     assert(in[0].size() < d);
@@ -106,12 +107,13 @@ int main(int argc, const char* argv[]) {
               j * in[0][0].cols(), in[n][i].row(j));
       L.row(n) = makeProgramInvariant<num_t>(l, - num_t(int(1)), true).first;
     }
+    cerr << "All images on memory are formed now, try to QR." << endl << flush;
     vector<SimpleVector<num_t> > res;
     vector<pair<num_t, int> > sute;
     auto Q(L.QR());
     res.reserve(Q.rows() - 1);
     for(int ii = 0; ii < Q.rows() - 1; ii ++) {
-      cerr << ii << " / " << Q.rows() - 1 << endl;
+      cerr << ii << " / " << Q.rows() - 1 << endl << flush;
       const auto orth(Q.zeroFix(L, sute));
       const auto n2(orth.dot(orth));
       if(res.size()) {
@@ -149,7 +151,7 @@ int main(int argc, const char* argv[]) {
   cerr << "Usage:" << endl;
   cerr << argv[0] << " + in0.ppm ... > L.txt" << endl;
   cerr << argv[0] << " - another0.ppm ... < L.txt" << endl;
-  cerr << "ddpmopt(32)?(mp)? 0 another0.ppm-4.ppm ..." << endl;
+  cerr << "ddpmopt(32)?(mp)? p another0.ppm-4.ppm ..." << endl;
   cerr << argv[0] << " i <another0.ppm-height> predg.ppm ... < L.txt" << endl;
   return - 1;
 }
