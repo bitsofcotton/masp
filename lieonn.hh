@@ -1964,7 +1964,7 @@ public:
   inline       pair<SimpleMatrix<T>, SimpleMatrix<T> > SVD1d() const;
   inline       SimpleMatrix<T> SVD() const;
   inline       pair<pair<SimpleMatrix<T>, SimpleMatrix<T> >, SimpleMatrix<T> > SVD(const SimpleMatrix<T>& src) const;
-  inline       SimpleVector<T>  zeroFix(const SimpleMatrix<T>& A, vector<pair<T, int> > fidx);
+  inline       SimpleVector<T>  zeroFix(const SimpleMatrix<T>& A, vector<pair<T, int> > fidx, const bool& maxrank = true);
   inline       SimpleVector<T>  inner(const SimpleVector<T>& bl, const SimpleVector<T>& bu) const;
   template <typename U> inline SimpleMatrix<U> real() const {
     assert(0 < entity.size() && 0 < ecols);
@@ -2257,7 +2257,7 @@ template <typename T> inline pair<pair<SimpleMatrix<T>, SimpleMatrix<T> >, Simpl
   return make_pair(make_pair(move(U1), move(U2.fillP(fill))), (Wt * D).transpose().QR() * Qt);
 }
 
-template <typename T> inline SimpleVector<T> SimpleMatrix<T>::zeroFix(const SimpleMatrix<T>& A, vector<pair<T, int> > fidx) {
+template <typename T> inline SimpleVector<T> SimpleMatrix<T>::zeroFix(const SimpleMatrix<T>& A, vector<pair<T, int> > fidx, const bool& maxrank) {
   // N.B. we now have |[A -bb] [x t]| <= 1 condition.
   // N.B. there's no difference |[A - bb] [x t]|^2 <= 1 condition in this.
   //      but not with mixed condition.
@@ -2284,8 +2284,7 @@ template <typename T> inline SimpleVector<T> SimpleMatrix<T>::zeroFix(const Simp
     const auto& iidx(fidx[idx].second);
     const auto  orth(this->col(iidx));
     const auto  n2(orth.dot(orth));
-    // N.B. rank(*this) on call is max rank, should not be singular.
-    if(n2 <= epsilon())
+    if(maxrank && n2 <= epsilon())
       continue;
     if(T(int(0)) < fidx[idx].first &&
        fidx[idx].first < sqrt(one.dot(one)) * epsilon()) {
@@ -2298,6 +2297,10 @@ template <typename T> inline SimpleVector<T> SimpleMatrix<T>::zeroFix(const Simp
       *this = Pb;
       break;
     }
+    // N.B. rank(*this) on call is max rank normally, should not be singular.
+    //      however, masp calls with rank isn't max cases.
+    if((! maxrank) && n2 <= epsilon())
+      continue;
     Pb = *this;
     // N.B. O(mn) can be writed into O(lg m + lg n) in many core cond.
 #if defined(_OPENMP)

@@ -114,7 +114,7 @@ int main(int argc, const char* argv[]) {
     res.reserve(Q.rows() - 1);
     for(int ii = 0; ii < Q.rows() - 1; ii ++) {
       cerr << ii << " / " << Q.rows() - 1 << endl << flush;
-      const auto orth(Q.zeroFix(L, sute));
+      const auto orth(Q.zeroFix(L, sute, false));
       const auto n2(orth.dot(orth));
       if(res.size()) {
         auto radd(orth / sqrt(n2));
