@@ -114,7 +114,7 @@ int main(int argc, const char* argv[]) {
     res.reserve(Q.rows() - 1);
     for(int ii = 0; ii < Q.rows() - 1; ii ++) {
       cerr << ii << " / " << Q.rows() - 1 << endl << flush;
-      const auto orth(Q.zeroFix(L, sute, false));
+      const auto orth(Q.zeroFix(L, sute));
       const auto n2(orth.dot(orth));
       if(res.size()) {
         auto radd(orth / sqrt(n2));
@@ -132,9 +132,13 @@ int main(int argc, const char* argv[]) {
     }
     static bool shown(false);
     SimpleMatrix<num_t> mres;
-    mres.resize(min(int(4), int(res.size())), res[0].size());
-    for(int i = 0; i < mres.rows(); i ++)
+    mres.resize(4, res[0].size());
+    const auto mrow(min(int(4), int(res.size())) );
+    for(int i = 0; i < mrow; i ++)
       mres.row(i) = move(res[i - mres.rows() + res.size()]);
+    for(int i = mrow; i < mres.rows(); i ++)
+      for(int j = 0; j < mres.cols(); j ++)
+        mres(i, j) = num_t(int(0));
     for(int i = 0; i < mres.rows(); i ++)
       for(int j = 0; j < mres.cols(); j ++)
         if(! isfinite(mres(i, j)) ) {
