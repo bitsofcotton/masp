@@ -30,4 +30,8 @@ maspmp:
 	${CXX} ${CXXFLAGS} ${MPFLAGS} -o maspmp masp.cc
 masp32mp:
 	${CXX} ${CXXFLAGS} ${MPFLAGS} -D_FLOAT_BITS_=32 -o masp32mp masp.cc
+masp64mp:
+	${CXX} ${CXXFLAGS} ${MPFLAGS} -D_FLOAT_BITS_=64 -o masp64mp masp.cc
+masp128mp:
+	${CXX} ${CXXFLAGS} ${MPFLAGS} -D_FLOAT_BITS_=128 -o masp128mp masp.cc
 

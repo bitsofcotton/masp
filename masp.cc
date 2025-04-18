@@ -44,7 +44,7 @@ int main(int argc, const char* argv[]) {
         for(int j = 0; j < in[i].rows(); j ++)
            mi.setVector(i * in[i].rows() * in[i].cols() + j * in[i].cols(),
              in[i].row(j));
-      const auto out4(L * makeProgramInvariant<num_t>(mi, - num_t(int(1)), true).first);
+      const auto out4(L * makeProgramInvariant<num_t>(mi).first);
       vector<SimpleMatrix<num_t> > out;
       out.resize(in.size(), SimpleMatrix<num_t>(1, out4.size()));
       for(int j = 0; j < out.size(); j ++)
@@ -105,7 +105,7 @@ int main(int argc, const char* argv[]) {
           l.setVector(
             i * in[0][0].rows() * in[0][0].cols() +
               j * in[0][0].cols(), in[n][i].row(j));
-      L.row(n) = makeProgramInvariant<num_t>(l, - num_t(int(1)), true).first;
+      L.row(n) = makeProgramInvariant<num_t>(l).first;
     }
     cerr << "All images on memory are formed now, try to QR." << endl << flush;
     vector<SimpleVector<num_t> > res;
