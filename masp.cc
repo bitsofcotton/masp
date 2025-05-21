@@ -135,7 +135,7 @@ int main(int argc, const char* argv[]) {
     mres.resize(4, res[0].size());
     const auto mrow(min(int(4), int(res.size())) );
     for(int i = 0; i < mrow; i ++)
-      mres.row(i) = move(res[i - mres.rows() + res.size()]);
+      mres.row(i) = move(res[i - mrow + res.size()]);
     for(int i = mrow; i < mres.rows(); i ++)
       for(int j = 0; j < mres.cols(); j ++)
         mres(i, j) = num_t(int(0));
