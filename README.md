@@ -1,5 +1,5 @@
 # masp
-make and apply internal states from/to input stream.
+make and apply surface internal states from/to input stream.
 
 # Description
 We make internal states for a type of automorphism of input stream.

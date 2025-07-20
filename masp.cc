@@ -10,6 +10,10 @@
 #include <cctype>
 #include <assert.h>
 
+#if defined(_OPENMP)
+#include <omp.h>
+#endif
+
 //#define int int64_t
 #define int int32_t
 #include "lieonn.hh"
