@@ -17,11 +17,15 @@
 #include <omp.h>
 #endif
 
+#if defined(_MIMALLOC_)
+#include <mimalloc.h>
+#endif
+
 //#define int int64_t
 #define int int32_t
 #include "lieonn.hh"
 typedef myfloat num_t;
-lieonn_t lieonn;
+int revert_acc_regression;
 
 using std::cout;
 using std::cerr;
@@ -154,10 +158,8 @@ int main(int argc, const char* argv[]) {
         normalize<num_t>(work)) ) cerr << "failed to save." << endl;
     }
   } else goto usage;
-  lieonnStaticDestroy();
   return 0;
  usage:
-  lieonnStaticDestroy();
   cerr << "Usage:" << endl;
   cerr << argv[0] << " + in0.ppm ... > L.txt" << endl;
   cerr << argv[0] << " - another0.ppm ... < L.txt" << endl;
